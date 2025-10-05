@@ -341,14 +341,14 @@ if ($firstAccessDate) {
                     <?php if (!empty($purchasedSyncClasses)): ?>
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2rem; margin-bottom: 1rem;">
                         <h3 style="margin: 0;"><i class="fas fa-video"></i> Mis Clases Sincrónicas</h3>
-                        <a href="../../controllers/IcsController.php?action=download_all" class="btn-access" style="background: var(--primary-color); padding: 10px 20px; font-size: 0.9rem;">
-                            <i class="fas fa-download"></i> Descargar Todas las Clases (.ics)
-                        </a>
+<!--                         <a href="../../controllers/IcsController.php?action=download_all" class="btn-access btn-download-all" style="background: var(--primary-color);">
+                            <i class="fas fa-download"></i> Descargar Todas (.ics)
+                        </a> -->
                     </div>
                     <div class="courses-grid">
                         <?php foreach ($purchasedSyncClasses as $syncClass): ?>
                             <?php $isPast = strtotime($syncClass['end_date']) < time(); ?>
-                            <div class="course-card" style="border-left: 4px solid #667eea;">
+                            <div class="course-card sync-class-card" style="border-left: 4px solid #667eea;">
                                 <div class="course-image" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; min-height: 200px;">
                                     <div style="text-align: center; color: white;">
                                         <i class="fas fa-video" style="font-size: 4rem; margin-bottom: 1rem;"></i>
@@ -379,12 +379,30 @@ if ($firstAccessDate) {
                                              <i class="fas fa-clock"></i> Clase Finalizada
                                          </button>
                                          <?php else: ?>
-                                         <a href="<?php echo htmlspecialchars($syncClass['meeting_link']); ?>" target="_blank" class="btn-access" style="background: #28a745; margin-bottom: 8px;">
+                                         <a href="<?php echo htmlspecialchars($syncClass['meeting_link']); ?>" target="_blank" class="btn-access" style="background: #46b6ff; margin-bottom: 8px;">
                                              <i class="fas fa-video"></i> Unirse a la Clase
                                          </a>
+                                         <?php if (!empty($syncClass['whatsapp_group_link'])): ?>
+                                         <a href="<?php echo htmlspecialchars($syncClass['whatsapp_group_link']); ?>" target="_blank" class="btn-access" style="background: #25D366; color: white; margin-bottom: 8px;">
+                                             <i class="fab fa-whatsapp"></i> Unirse al Grupo de WhatsApp
+                                         </a>
                                          <?php endif; ?>
-                                         <a href="../../controllers/IcsController.php?action=download&class_id=<?php echo $syncClass['id']; ?>" class="btn-access" style="background: #f8f9fa; color: #333; border: 2px solid #e0e0e0;">
-                                             <i class="fas fa-calendar-plus"></i> Agregar a mi Calendario
+                                         <?php endif; ?>
+                                         <a href="../../controllers/IcsController.php?action=download&class_id=<?php echo $syncClass['id']; ?>" class="btn-access btn-ics-small" style="background: #f8f9fa; color: #333; border: 2px solid #e0e0e0;">
+                                             <i class="fas fa-calendar-plus"></i> Agregar a Calendario
+                                         </a>
+                                         <?php
+                                         // Generar URL para Google Calendar
+                                         $startDateFormatted = gmdate('Ymd\THis\Z', strtotime($syncClass['start_date']));
+                                         $endDateFormatted = gmdate('Ymd\THis\Z', strtotime($syncClass['end_date']));
+                                         $googleCalendarUrl = 'https://calendar.google.com/calendar/render?action=TEMPLATE';
+                                         $googleCalendarUrl .= '&text=' . urlencode($syncClass['title']);
+                                         $googleCalendarUrl .= '&dates=' . $startDateFormatted . '/' . $endDateFormatted;
+                                         $googleCalendarUrl .= '&details=' . urlencode(($syncClass['description'] ?? '') . "\n\nEnlace de reunión: " . $syncClass['meeting_link']);
+                                         $googleCalendarUrl .= '&location=' . urlencode($syncClass['meeting_link']);
+                                         ?>
+                                         <a href="<?php echo htmlspecialchars($googleCalendarUrl); ?>" target="_blank" class="btn-access btn-ics-small" style="background: #4285f4; color: white; border: 2px solid #4285f4;">
+                                             <i class="fab fa-google"></i> Agregar a Google Calendar
                                          </a>
                                      </div>
                                 </div>
