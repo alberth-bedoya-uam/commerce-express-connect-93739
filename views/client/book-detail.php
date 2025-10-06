@@ -62,10 +62,9 @@ if (!$book) {
                     ?>
                 <div class="user-menu" style="position: relative;">
                     <button class="user-button"
-                        style="display: flex; align-items: center; gap: 0.5rem; background: transparent; border: 1px solid rgba(255,255,255,0.3); padding: 0.5rem 1rem; border-radius: 25px; color: white; cursor: pointer; transition: all 0.3s ease;"
+                        style="display: flex; align-items: center; gap: 0.5rem; background: transparent; border: 1px solid #ddd; padding: 0.5rem 1rem; border-radius: 8px; color: #333; cursor: pointer; transition: all 0.3s ease;"
                         onclick="toggleUserMenu()">
-                        <i class="fas fa-user-circle" style="font-size: 1.2rem;"></i>
-                        <span><?php echo htmlspecialchars($userDisplayName); ?></span>
+                        <i class="fas fa-bars" style="font-size: 1.2rem;"></i>
                         <i class="fas fa-chevron-down" style="font-size: 0.8rem; transition: transform 0.3s;"></i>
                     </button>
                     <div class="user-dropdown" id="userDropdown"
@@ -98,7 +97,8 @@ if (!$book) {
     </header>
     <style>
     .user-button:hover {
-        background: rgba(255, 255, 255, 0.1) !important;
+        background: #f8f9fa !important;
+        border-color: #8a56e2 !important;
     }
 
     .user-button:hover .fa-chevron-down {
