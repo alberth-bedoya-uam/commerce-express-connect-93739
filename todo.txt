@@ -1,4 +1,14 @@
-1. FIX: Problema de recuperar contraseña.
-2. FIX: URL de Comprar en amazon. (Seccion de libros en index.php)
-3. FIX: Filtros en all-books.php
-4. FIX: Filtros en las vistas del administrador
+FIXME
+1. FIX: Sistema de recuperar contraseña.
+2. FIX: Filtros en all-books.php
+3. FIX: Filtros en las vistas del administrador
+4. FIX: Agregar al calendario en el panel del administrador
+
+TODO
+1. Unificar los footer
+2. Unificar los 3 botones en un menu desplegable en el nav en home.php
+3. Actualizar el estilo del nav por el estilo que hay en home.php e index.php en:
+    all-courses.php
+    all-sync-classes.php
+    all-books.php
+    purchase-history.php

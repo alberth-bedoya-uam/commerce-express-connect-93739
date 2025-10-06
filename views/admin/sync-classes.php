@@ -11,12 +11,15 @@ if (!AuthController::isAdmin()) {
 
 require_once __DIR__ . '/../../config/Database.php';
 require_once __DIR__ . '/../../models/SyncClass.php';
+require_once __DIR__ . '/../../models/SyncClassSchedule.php';
 use Models\SyncClass;
+use Models\SyncClassSchedule;
 
 $currentUser = AuthController::getCurrentUser();
 $database = new \Database();
 $db = $database->getConnection();
 $syncClassModel = new SyncClass($db);
+$scheduleModel = new SyncClassSchedule($db);
 
 $action = $_GET['sub_action'] ?? '';
 $classId = $_GET['class_id'] ?? '';
@@ -30,6 +33,7 @@ if ($action === 'create' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $whatsapp_group_link = trim($_POST['whatsapp_group_link'] ?? '');
     $start_date = $_POST['start_date'] ?? '';
     $end_date = $_POST['end_date'] ?? '';
+    $status = $_POST['status'] ?? 'active';
     
     if (!empty($title) && !empty($meeting_link) && !empty($start_date) && !empty($end_date)) {
         $syncClassModel->title = $title;
@@ -39,9 +43,27 @@ if ($action === 'create' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $syncClassModel->whatsapp_group_link = $whatsapp_group_link;
         $syncClassModel->start_date = $start_date;
         $syncClassModel->end_date = $end_date;
+        $syncClassModel->status = $status;
         $syncClassModel->is_active = 1;
         
         if ($syncClassModel->create()) {
+            $newClassId = $syncClassModel->id;
+            
+            // Guardar horarios semanales - SOLO si el día está seleccionado (no vacío)
+            if (isset($_POST['schedules']) && is_array($_POST['schedules'])) {
+                foreach ($_POST['schedules'] as $schedule) {
+                    // Verificar que el día esté seleccionado (no vacío) y tenga horas válidas
+                    if (isset($schedule['day']) && $schedule['day'] !== '' && 
+                        !empty($schedule['start_time']) && !empty($schedule['end_time'])) {
+                        $scheduleModel->sync_class_id = $newClassId;
+                        $scheduleModel->day_of_week = intval($schedule['day']);
+                        $scheduleModel->start_time = $schedule['start_time'];
+                        $scheduleModel->end_time = $schedule['end_time'];
+                        $scheduleModel->create();
+                    }
+                }
+            }
+            
             $success_message = "Clase sincrónica creada exitosamente";
         } else {
             $error_message = "Error al crear la clase";
@@ -60,6 +82,7 @@ if ($action === 'edit' && $classId && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $whatsapp_group_link = trim($_POST['whatsapp_group_link'] ?? '');
     $start_date = $_POST['start_date'] ?? '';
     $end_date = $_POST['end_date'] ?? '';
+    $status = $_POST['status'] ?? 'active';
     $is_active = intval($_POST['is_active'] ?? 1);
     
     if (!empty($title) && !empty($meeting_link) && !empty($start_date) && !empty($end_date)) {
@@ -71,9 +94,28 @@ if ($action === 'edit' && $classId && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $syncClassModel->whatsapp_group_link = $whatsapp_group_link;
         $syncClassModel->start_date = $start_date;
         $syncClassModel->end_date = $end_date;
+        $syncClassModel->status = $status;
         $syncClassModel->is_active = $is_active;
         
         if ($syncClassModel->update()) {
+            // Eliminar horarios antiguos
+            $scheduleModel->deleteBySyncClass($classId);
+            
+            // Guardar nuevos horarios - SOLO si el día está seleccionado (no vacío)
+            if (isset($_POST['schedules']) && is_array($_POST['schedules'])) {
+                foreach ($_POST['schedules'] as $schedule) {
+                    // Verificar que el día esté seleccionado (no vacío) y tenga horas válidas
+                    if (isset($schedule['day']) && $schedule['day'] !== '' && 
+                        !empty($schedule['start_time']) && !empty($schedule['end_time'])) {
+                        $scheduleModel->sync_class_id = $classId;
+                        $scheduleModel->day_of_week = intval($schedule['day']);
+                        $scheduleModel->start_time = $schedule['start_time'];
+                        $scheduleModel->end_time = $schedule['end_time'];
+                        $scheduleModel->create();
+                    }
+                }
+            }
+            
             $success_message = "Clase sincrónica actualizada exitosamente";
         } else {
             $error_message = "Error al actualizar la clase";
@@ -97,8 +139,13 @@ $syncClasses = $syncClassModel->readAll();
 
 // Obtener clase para editar
 $editClass = null;
+$editSchedules = [];
 if ($action === 'edit' && $classId && $_SERVER['REQUEST_METHOD'] !== 'POST') {
     $editClass = $syncClassModel->readOne($classId);
+    // Cargar horarios existentes
+    if ($editClass) {
+        $editSchedules = $scheduleModel->readBySyncClass($classId);
+    }
 }
 ?>
 <!DOCTYPE html>
@@ -485,6 +532,21 @@ if ($action === 'edit' && $classId && $_SERVER['REQUEST_METHOD'] !== 'POST') {
             color: white;
         }
 
+        .status-upcoming {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: white;
+        }
+
+        .status-ending_soon {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: white;
+        }
+
+        .status-finished {
+            background: linear-gradient(135deg, #64748b, #475569);
+            color: white;
+        }
+
         .action-buttons {
             display: flex;
             gap: 0.5rem;
@@ -633,6 +695,9 @@ if ($action === 'edit' && $classId && $_SERVER['REQUEST_METHOD'] !== 'POST') {
                 <a href="<?php echo $baseUrl; ?>index.php?page=admin&action=books" class="nav-link">
                     <i class="fas fa-book-open"></i> Libros
                 </a>
+                <a href="<?php echo $baseUrl; ?>index.php?page=admin&action=contact-info" class="nav-link">
+                    <i class="fas fa-address-book"></i> Información de Contacto
+                </a>
                 <a href="<?php echo $baseUrl; ?>index.php?page=admin&action=profile" class="nav-link">
                     <i class="fas fa-user-cog"></i> Mi Perfil
                 </a>
@@ -714,12 +779,22 @@ if ($action === 'edit' && $classId && $_SERVER['REQUEST_METHOD'] !== 'POST') {
                         <input type="datetime-local" name="end_date" value="<?php echo $editClass ? date('Y-m-d\TH:i', strtotime($editClass['end_date'])) : ''; ?>" required>
                     </div>
                     
+                    <div class="form-group">
+                        <label>Estado de la Clase *</label>
+                        <select name="status">
+                            <option value="active" <?php echo (!$editClass || ($editClass['status'] ?? 'active') == 'active') ? 'selected' : ''; ?>>Activo</option>
+                            <option value="upcoming" <?php echo ($editClass && ($editClass['status'] ?? '') == 'upcoming') ? 'selected' : ''; ?>>Por Empezar (Pre-compra)</option>
+                            <option value="ending_soon" <?php echo ($editClass && ($editClass['status'] ?? '') == 'ending_soon') ? 'selected' : ''; ?>>Por Terminar</option>
+                            <option value="finished" <?php echo ($editClass && ($editClass['status'] ?? '') == 'finished') ? 'selected' : ''; ?>>Finalizado</option>
+                        </select>
+                    </div>
+                    
                     <?php if ($editClass): ?>
                     <div class="form-group">
-                        <label>Estado</label>
+                        <label>Visibilidad</label>
                         <select name="is_active">
-                            <option value="1" <?php echo ($editClass['is_active'] == 1) ? 'selected' : ''; ?>>Activa</option>
-                            <option value="0" <?php echo ($editClass['is_active'] == 0) ? 'selected' : ''; ?>>Inactiva</option>
+                            <option value="1" <?php echo ($editClass['is_active'] == 1) ? 'selected' : ''; ?>>Visible</option>
+                            <option value="0" <?php echo ($editClass['is_active'] == 0) ? 'selected' : ''; ?>>Oculta</option>
                         </select>
                     </div>
                     <?php endif; ?>
@@ -822,8 +897,18 @@ if ($action === 'edit' && $classId && $_SERVER['REQUEST_METHOD'] !== 'POST') {
                         <td><?php echo date('d/m/Y H:i', strtotime($class['start_date'])); ?></td>
                         <td><?php echo date('d/m/Y H:i', strtotime($class['end_date'])); ?></td>
                         <td>
-                            <span class="status-badge <?php echo $class['is_active'] ? 'status-active' : 'status-inactive'; ?>">
-                                <?php echo $class['is_active'] ? 'Activa' : 'Inactiva'; ?>
+                            <?php 
+                            $status = $class['status'] ?? 'active';
+                            $statusBadges = [
+                                'active' => ['text' => 'Activo', 'class' => 'status-active'],
+                                'upcoming' => ['text' => 'Por Empezar', 'class' => 'status-upcoming'],
+                                'ending_soon' => ['text' => 'Por Terminar', 'class' => 'status-ending_soon'],
+                                'finished' => ['text' => 'Finalizado', 'class' => 'status-finished']
+                            ];
+                            $statusInfo = $statusBadges[$status] ?? $statusBadges['active'];
+                            ?>
+                            <span class="status-badge <?php echo $statusInfo['class']; ?>">
+                                <?php echo $statusInfo['text']; ?>
                             </span>
                         </td>
                         <td>
@@ -831,6 +916,9 @@ if ($action === 'edit' && $classId && $_SERVER['REQUEST_METHOD'] !== 'POST') {
                                 <a href="?page=admin&action=sync-classes&sub_action=edit&class_id=<?php echo $class['id']; ?>" class="btn btn-sm btn-edit">
                                     <i class="fas fa-edit"></i> Editar
                                 </a>
+                                <button type="button" onclick="addToGoogleCalendar(<?php echo $class['id']; ?>)" class="btn btn-sm" style="background: #4285F4; color: white;" title="Agregar a mi calendario">
+                                    <i class="fas fa-calendar-plus"></i> Mi Calendario
+                                </button>
                                 <a href="?page=admin&action=sync-classes&sub_action=delete&class_id=<?php echo $class['id']; ?>" 
                                    class="btn btn-sm btn-delete" 
                                    onclick="return confirm('¿Estás seguro de eliminar esta clase?')">
@@ -916,7 +1004,7 @@ if ($action === 'edit' && $classId && $_SERVER['REQUEST_METHOD'] !== 'POST') {
         });
 
         function addToGoogleCalendar(classId) {
-            window.open('/controllers/GoogleCalendarController.php?action=add&class_id=' + classId, '_blank');
+            window.open('../../controllers/GoogleCalendarController.php?action=add&class_id=' + classId, '_blank');
         }
 
         // Responsive sidebar

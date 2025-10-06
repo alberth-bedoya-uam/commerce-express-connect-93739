@@ -95,6 +95,10 @@ if ($page === 'admin') {
             include __DIR__ . '/views/admin/sync-classes.php';
             break;
             
+        case 'contact-info':
+            include __DIR__ . '/views/admin/contact-info.php';
+            break;
+            
         case 'profile':
             include __DIR__ . '/views/admin/profile.php';
             break;
@@ -118,11 +122,16 @@ if (AuthController::isAuthenticated()) {
 
 // Si no está logueado, mostrar la página de inicio pública
 require_once __DIR__ . '/models/Playlist.php';
+require_once __DIR__ . '/models/AdminContactInfo.php';
 use Models\Playlist;
 
 $database = new Database();
 $db = $database->getConnection();
 $playlistModel = new Playlist($db);
+
+// Obtener información de contacto
+$contactModel = new \Models\AdminContactInfo($db);
+$contactInfo = $contactModel->get();
 
 // Obtener algunos cursos para mostrar (máximo 6)
 try {
@@ -157,8 +166,9 @@ try {
                 <ul>
                     <li><a href="#inicio">Inicio</a></li>
                     <li><a href="#cursos">Cursos</a></li>
+                    <li><a href="#clases-privadas">Clases</a></li>
+                    <li><a href="#books-showcase">Libros</a></li>
                     <li><a href="#sobre-nosotros">Sobre Nosotros</a></li>
-                    <li><a href="#contacto">Contacto</a></li>
                 </ul>
             </nav>
             
@@ -285,78 +295,85 @@ try {
     </section>
     <?php endif; ?>
 
-    <!-- Levels Section -->
-    <section class="courses">
+    <!-- Private Classes Section -->
+    <section id="clases-privadas" class="private-classes" style="background: #f8f9fa;">
         <div class="container">
-            <h2>Niveles de Inglés</h2>
-            <p class="section-subtitle">Encuentra el nivel perfecto para ti</p>
-
-            <div class="courses-grid">
-                <div class="course-card">
-                    <div class="level-badge neon-glow" style="background-color: #ff6b35; color: white;">A1</div>
-                    <div class="course-icon"><i class="fas fa-seedling"></i></div>
-                    <h3 class="course-title">BÁSICO</h3>
-                    <p class="course-subtitle">Primeros pasos en inglés</p>
-                    <ul class="course-features">
-                        <li>Vocabulario básico</li>
-                        <li>Gramática fundamental</li>
-                        <li>Conversaciones simples</li>
-                    </ul>
+            <div class="private-classes-content">
+                <div class="private-classes-header">
+                    <h2 style="color: #333;">Clases Privadas Personalizadas</h2>
+                    <p class="section-subtitle" style="color: #666;">¿Necesitas un enfoque más personalizado? Agenda una clase privada conmigo y avanza a tu propio ritmo</p>
                 </div>
                 
-                <div class="course-card">
-                    <div class="level-badge neon-glow" style="background-color: #e74c3c; color: white;">A2</div>
-                    <div class="course-icon"><i class="fas fa-comments"></i></div>
-                    <h3 class="course-title">PRE INTERMEDIO</h3>
-                    <p class="course-subtitle">Construye tu base</p>
-                    <ul class="course-features">
-                        <li>Expresiones cotidianas</li>
-                        <li>Tiempos verbales</li>
-                        <li>Comprensión auditiva</li>
-                    </ul>
+                <div class="private-classes-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 30px; margin-bottom: 60px;">
+                    <div class="private-class-card" style="background: white; padding: 40px 30px; border-radius: 15px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.1); transition: all 0.3s ease;">
+                        <div class="private-class-icon" style="background: linear-gradient(135deg, #8a56e2 0%, #a256e2 100%); width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; font-size: 2rem; color: white;">
+                            <i class="fas fa-user-graduate"></i>
+                        </div>
+                        <h3 style="color: #333; margin-bottom: 15px; font-size: 1.3rem;">Atención Personalizada</h3>
+                        <p style="color: #666; line-height: 1.6;">Clases uno a uno diseñadas específicamente para tus necesidades y objetivos de aprendizaje</p>
+                    </div>
+                    
+                    <div class="private-class-card" style="background: white; padding: 40px 30px; border-radius: 15px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.1); transition: all 0.3s ease;">
+                        <div class="private-class-icon" style="background: linear-gradient(135deg, #8a56e2 0%, #a256e2 100%); width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; font-size: 2rem; color: white;">
+                            <i class="fas fa-calendar-check"></i>
+                        </div>
+                        <h3 style="color: #333; margin-bottom: 15px; font-size: 1.3rem;">Horarios Flexibles</h3>
+                        <p style="color: #666; line-height: 1.6;">Agenda tus clases cuando más te convenga, adaptándose a tu estilo de vida</p>
+                    </div>
+                    
+                    <div class="private-class-card" style="background: white; padding: 40px 30px; border-radius: 15px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.1); transition: all 0.3s ease;">
+                        <div class="private-class-icon" style="background: linear-gradient(135deg, #8a56e2 0%, #a256e2 100%); width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; font-size: 2rem; color: white;">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <h3 style="color: #333; margin-bottom: 15px; font-size: 1.3rem;">Progreso Acelerado</h3>
+                        <p style="color: #666; line-height: 1.6;">Avanza más rápido con un plan de estudios personalizado y retroalimentación constante</p>
+                    </div>
                 </div>
                 
-                <div class="course-card">
-                    <div class="level-badge neon-glow" style="background-color: #3498db; color: white;">B1</div>
-                    <div class="course-icon"><i class="fas fa-graduation-cap"></i></div>
-                    <h3 class="course-title">INTERMEDIO</h3>
-                    <p class="course-subtitle">Desarrolla fluidez</p>
-                    <ul class="course-features">
-                        <li>Conversaciones fluidas</li>
-                        <li>Escritura estructurada</li>
-                        <li>Comprensión de textos</li>
-                    </ul>
+                <div class="private-classes-cta">
+                    <h3>¿Listo para empezar?</h3>
+                    <p>Contáctame por WhatsApp y conversemos sobre tus objetivos de aprendizaje</p>
+                    <a href="https://wa.me/<?php echo htmlspecialchars($contactInfo['whatsapp_number'] ?? '573123456789'); ?>?text=Hola,%20estoy%20interesado%20en%20clases%20privadas%20de%20inglés" 
+                       target="_blank" 
+                       class="btn-whatsapp-large">
+                        <i class="fab fa-whatsapp"></i> Contáctame por WhatsApp
+                    </a>
                 </div>
                 
-                <div class="course-card">
-                    <div class="level-badge neon-glow" style="background-color: #1abc9c; color: white;">B2</div>
-                    <div class="course-icon"><i class="fas fa-trophy"></i></div>
-                    <h3 class="course-title">INTERMEDIO ALTO</h3>
-                    <p class="course-subtitle">Perfecciona tu inglés</p>
-                    <ul class="course-features">
-                        <li>Debates y discusiones</li>
-                        <li>Escritura avanzada</li>
-                        <li>Comprensión compleja</li>
-                    </ul>
-                </div>
-                
-                <div class="course-card">
-                    <div class="level-badge neon-glow" style="background-color: #9b59b6; color: white;">C1</div>
-                    <div class="course-icon"><i class="fas fa-crown"></i></div>
-                    <h3 class="course-title">AVANZADO</h3>
-                    <p class="course-subtitle">Dominio del idioma</p>
-                    <ul class="course-features">
-                        <li>Inglés profesional</li>
-                        <li>Literatura y cultura</li>
-                        <li>Expresión sofisticada</li>
-                    </ul>
+                <div class="social-media-section">
+                    <h3>Sígueme en Redes Sociales</h3>
+                    <p>Encuentra tips, consejos y contenido exclusivo en mis redes</p>
+                    <div class="social-links">
+                        <a href="<?php echo htmlspecialchars($contactInfo['instagram_url'] ?? 'https://instagram.com/profehernan'); ?>" target="_blank" class="social-link instagram">
+                            <i class="fab fa-instagram"></i>
+                            <span>Instagram</span>
+                        </a>
+                        <a href="<?php echo htmlspecialchars($contactInfo['facebook_url'] ?? 'https://facebook.com/profehernan'); ?>" target="_blank" class="social-link facebook">
+                            <i class="fab fa-facebook-f"></i>
+                            <span>Facebook</span>
+                        </a>
+                        <a href="<?php echo htmlspecialchars($contactInfo['youtube_url'] ?? 'https://youtube.com/@profehernan'); ?>" target="_blank" class="social-link youtube">
+                            <i class="fab fa-youtube"></i>
+                            <span>YouTube</span>
+                        </a>
+                        <a href="https://wa.me/<?php echo htmlspecialchars($contactInfo['whatsapp_number'] ?? '573123456789'); ?>" target="_blank" class="social-link whatsapp">
+                            <i class="fab fa-whatsapp"></i>
+                            <span>WhatsApp</span>
+                        </a>
+                        <?php if (!empty($contactInfo['whatsapp_channel'])): ?>
+                        <a href="<?php echo htmlspecialchars($contactInfo['whatsapp_channel']); ?>" target="_blank" class="social-link whatsapp-channel" style="background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);">
+                            <i class="fab fa-whatsapp"></i>
+                            <span>Canal WhatsApp</span>
+                        </a>
+                        <?php endif; ?>
+                    </div>
                 </div>
             </div>
         </div>
     </section>
 
     <!-- Books Section -->
-    <section class="books-showcase">
+    <section class="books-showcase" id="books-showcase">
         <div class="container">
             <div class="section-header">
                 <h2>Libros Recomendados</h2>
@@ -446,67 +463,219 @@ try {
         </div>
     </section>
 
-    <!-- CTA Section -->
-    <section class="promo-box">
-        <div class="container">
-            <h2 class="promo-title">¿Listo para Comenzar?</h2>
-            <p style="font-size: 1.2rem; margin-bottom: 30px; opacity: 0.9;">Únete a nuestra comunidad de estudiantes y comienza tu viaje hacia la fluidez en inglés</p>
-        </div>
-    </section>
 
-    <!-- Contact Section -->
-    <section id="contacto" class="contact">
-        <div class="container">
-            <div class="contact-form">
-                <h2>¿Tienes Preguntas?</h2>
-                <p>Contáctanos y te ayudaremos a elegir el curso perfecto para ti</p>
-                <form>
-                    <div class="form-group">
-                        <label for="name">Tu nombre</label>
-                        <input type="text" id="name" placeholder="Nombre completo" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="email">Tu correo electrónico</label>
-                        <input type="email" id="email" placeholder="correo@ejemplo.com" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="message">Tu mensaje</label>
-                        <textarea id="message" placeholder="¿En qué podemos ayudarte?" required></textarea>
-                    </div>
-                    <button type="submit" class="btn-primary">Enviar Mensaje</button>
-                </form>
-            </div>
-            <div class="contact-info">
-                <div class="info-item">
-                    <div class="icon">
-                        <i class="fas fa-envelope"></i>
-                    </div>
-                    <div class="text">
-                        <h3>CORREO ELECTRÓNICO</h3>
-                        <p>elprofesorhernan@gmail.com</p>
-                    </div>
-                </div>
-                <div class="info-item">
-                    <div class="icon">
-                        <i class="fas fa-phone"></i>
-                    </div>
-                    <div class="text">
-                        <h3>TELÉFONO</h3>
-                        <p>+57 123 456 789</p>
-                    </div>
-                </div>
-                <div class="info-item">
-                    <div class="icon">
-                        <i class="fas fa-clock"></i>
-                    </div>
-                    <div class="text">
-                        <h3>HORARIO</h3>
-                        <p>Lun - Vie: 8:00 AM - 6:00 PM</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
+    
+    <style>
+    .private-classes {
+        padding: 80px 0;
+        background: linear-gradient(135deg, #f3effaff 0%, #a256e2 100%);
+        color: white;
+    }
+    
+    .private-classes-header {
+        text-align: center;
+        margin-bottom: 60px;
+    }
+    
+    .private-classes-header h2 {
+        font-size: 2.5rem;
+        margin-bottom: 20px;
+        color: white;
+    }
+    
+    .private-classes-header .section-subtitle {
+        font-size: 1.2rem;
+        opacity: 0.95;
+        max-width: 700px;
+        margin: 0 auto;
+        color: white;
+    }
+    
+    .private-classes-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 30px;
+        margin-bottom: 60px;
+    }
+    
+    .private-class-card {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        padding: 40px 30px;
+        border-radius: 15px;
+        text-align: center;
+        transition: transform 0.3s ease, background 0.3s ease;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    
+    .private-class-card:hover {
+        transform: translateY(-10px);
+        background: rgba(255, 255, 255, 0.15);
+    }
+    
+    .private-class-icon {
+        width: 80px;
+        height: 80px;
+        margin: 0 auto 20px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2.5rem;
+    }
+    
+    .private-class-card h3 {
+        font-size: 1.5rem;
+        margin-bottom: 15px;
+        color: white;
+    }
+    
+    .private-class-card p {
+        opacity: 0.9;
+        line-height: 1.6;
+        color: white;
+    }
+    
+    .private-classes-cta {
+        background: rgba(255, 255, 255, 0.95);
+        padding: 50px;
+        border-radius: 20px;
+        text-align: center;
+        margin-bottom: 60px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+    }
+    
+    .private-classes-cta h3 {
+        font-size: 2rem;
+        margin-bottom: 15px;
+        color: #333;
+    }
+    
+    .private-classes-cta p {
+        font-size: 1.1rem;
+        color: #666;
+        margin-bottom: 30px;
+    }
+    
+    .btn-whatsapp-large {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        padding: 18px 40px;
+        background: #25D366;
+        color: white;
+        text-decoration: none;
+        border-radius: 50px;
+        font-size: 1.2rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        box-shadow: 0 10px 30px rgba(37, 211, 102, 0.3);
+    }
+    
+    .btn-whatsapp-large:hover {
+        background: #128C7E;
+        transform: scale(1.05);
+        box-shadow: 0 15px 40px rgba(37, 211, 102, 0.4);
+    }
+    
+    .btn-whatsapp-large i {
+        font-size: 1.5rem;
+    }
+    
+    .social-media-section {
+        text-align: center;
+    }
+    
+    .social-media-section h3 {
+        font-size: 2rem;
+        margin-bottom: 15px;
+        color: black
+    }
+    
+    .social-media-section p {
+        font-size: 1.1rem;
+        margin-bottom: 30px;
+        opacity: 0.9;
+        color: black;
+    }
+    
+    .social-links {
+        display: flex;
+        justify-content: center;
+        gap: 20px;
+        flex-wrap: wrap;
+    }
+    
+    .social-link {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+        padding: 25px 30px;
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        border-radius: 15px;
+        text-decoration: none;
+        color: white;
+        transition: all 0.3s ease;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        min-width: 140px;
+    }
+    
+    .social-link i {
+        font-size: 2.5rem;
+    }
+    
+    .social-link span {
+        font-size: 1rem;
+        font-weight: 600;
+    }
+    
+    .social-link:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    }
+    
+    .social-link.instagram:hover {
+        background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+    }
+    
+    .social-link.facebook:hover {
+        background: #1877F2;
+    }
+    
+    .social-link.youtube:hover {
+        background: #FF0000;
+    }
+    
+    .social-link.whatsapp:hover {
+        background: #25D366;
+    }
+    
+    @media (max-width: 768px) {
+        .private-classes {
+            padding: 60px 0;
+        }
+        
+        .private-classes-header h2 {
+            font-size: 2rem;
+        }
+        
+        .private-classes-cta {
+            padding: 30px 20px;
+        }
+        
+        .social-links {
+            gap: 15px;
+        }
+        
+        .social-link {
+            min-width: 120px;
+            padding: 20px;
+        }
+    }
+    </style>
 
     <!-- Footer -->
     <footer class="footer">
@@ -524,6 +693,7 @@ try {
                     <ul>
                         <li><a href="#inicio">Inicio</a></li>
                         <li><a href="#cursos">Cursos</a></li>
+                        <li><a href="#clases-privadas">Clases Privadas</a></li>
                         <li><a href="#sobre-nosotros">Sobre Nosotros</a></li>
                         <li><a href="#contacto">Contacto</a></li>
                     </ul>
@@ -750,5 +920,8 @@ try {
             }
         });
     </script>
+    
+    <!-- Smooth Scroll Script -->
+    <script src="public/js/smooth-scroll.js"></script>
 </body>
 </html>

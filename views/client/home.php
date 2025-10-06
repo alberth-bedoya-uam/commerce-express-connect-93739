@@ -10,6 +10,7 @@ require_once __DIR__ . '/../../models/Playlist.php';
 require_once __DIR__ . '/../../models/UserCourse.php';
 require_once __DIR__ . '/../../controllers/CartController.php';
 require_once __DIR__ . '/../../models/Book.php';
+require_once __DIR__ . '/../../models/AdminContactInfo.php';
 
 use Controllers\AuthController;
 use Models\Playlist;
@@ -28,6 +29,10 @@ $db = $database->getConnection();
 $playlistModel = new Playlist($db);
 $userCourseModel = new UserCourse($db);
 $bookModel = new Book($db);
+
+// Obtener información de contacto
+$contactModel = new \Models\AdminContactInfo($db);
+$contactInfo = $contactModel->get();
 
 // Obtener usuario actual
 $currentUser = AuthController::getCurrentUser();
@@ -122,8 +127,10 @@ $userDisplayName = getUserDisplayName($currentUser);
             
             <nav class="nav">
                 <ul>
-                    <li><a href="home.php" class="active">Inicio</a></li>
-                    <li><a href="all-courses.php">Cursos</a></li>
+                    <li><a href="#inicio">Inicio</a></li>
+                    <li><a href="#best-sellers">Cursos</a></li>
+                    <li><a href="#clases-privadas">Clases</a></li>
+                    <li><a href="#books-showcase">Libros</a></li>
                     <li><a href="cart.php">
                         <i class="fas fa-shopping-cart"></i>
                         Carrito
@@ -135,7 +142,6 @@ $userDisplayName = getUserDisplayName($currentUser);
             </nav>
             
             <div class="auth-links">
-                <span>Hola, <?php echo htmlspecialchars($userDisplayName); ?></span>
                 <?php if (($currentUser['role'] ?? '') === 'admin'): ?>
                     <a href="../admin/index.php?controller=admin&action=dashboard" class="btn-admin">Panel Admin</a>
                 <?php endif; ?>
@@ -147,7 +153,7 @@ $userDisplayName = getUserDisplayName($currentUser);
     </header>
 
     <!-- Banner Section -->
-    <section class="banner">
+    <section id="inicio" class="banner">
         <div class="container">
             <div class="banner-content">
                 <div class="banner-text">
@@ -155,7 +161,7 @@ $userDisplayName = getUserDisplayName($currentUser);
                     <p>Aprende a tu propio ritmo con lecciones interactivas, profesores expertos y una comunidad de apoyo. ¡Tu fluidez comienza aquí!</p>
                     <div class="banner-buttons">
                         <a href="#best-sellers" class="btn-primary">Explorar Cursos</a>
-                        <a href="#about-section" class="btn-secondary">Conocer al Profesor</a>
+                        <a href="#private-classes-cta" class="btn-secondary">Contacta al Profesor</a>
                     </div>
                 </div>
                 <div class="banner-image">
@@ -249,17 +255,42 @@ $userDisplayName = getUserDisplayName($currentUser);
                     <?php foreach ($activeSyncClasses as $syncClass): ?>
                         <?php 
                             $hasAccess = $userSyncClassModel->hasAccess($userId, $syncClass['id']);
-                            $isPast = strtotime($syncClass['end_date']) < time();
+                            $status = $syncClass['status'] ?? 'active';
+                            
+                            // Obtener horarios semanales
+                            require_once __DIR__ . '/../../models/SyncClassSchedule.php';
+                            $scheduleModel = new \Models\SyncClassSchedule($db);
+                            $schedules = $scheduleModel->readBySyncClass($syncClass['id']);
+                            
+                            // Mapeo de estados a badges
+                            $statusBadges = [
+                                'active' => ['text' => 'Activo', 'color' => '#28a745'],
+                                'upcoming' => ['text' => 'Por Empezar', 'color' => '#17a2b8'],
+                                'ending_soon' => ['text' => 'Por Terminar', 'color' => '#ff6b6b'],
+                                'finished' => ['text' => 'Finalizado', 'color' => '#6c757d']
+                            ];
+                            $statusInfo = $statusBadges[$status] ?? ['text' => 'Activo', 'color' => '#28a745'];
+                            $showPrecompra = ($status === 'upcoming');
                         ?>
                         <div class="product-card">
                             <div class="product-tumb">
-                                <div style="background: linear-gradient(135deg, #8a56e2 0%, #56e2c6 100%); display: flex; align-items: center; justify-content: center; min-height: 200px;">
+                                <div style="background: linear-gradient(135deg, #8a56e2 0%, #56e2c6 100%); display: flex; align-items: center; justify-content: center; min-height: 200px; position: relative;">
                                     <div style="text-align: center; color: white;">
                                         <i class="fas fa-video" style="font-size: 4rem; margin-bottom: 1rem;"></i>
                                         <p style="font-size: 1.2rem; font-weight: 600;">Clase en Vivo</p>
                                     </div>
+                                    <div style="position: absolute; top: 10px; right: 10px; display: flex; gap: 6px; flex-direction: column; align-items: flex-end;">
+                                        <div style="background: <?php echo $statusInfo['color']; ?>; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 600;">
+                                            <?php echo $statusInfo['text']; ?>
+                                        </div>
+                                        <?php if ($showPrecompra): ?>
+                                        <div style="background: rgba(255, 255, 255, 0.9); color: #8a56e2; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 600;">
+                                            Disponible en Pre-compra
+                                        </div>
+                                        <?php endif; ?>
+                                    </div>
                                 </div>
-                                <?php if (!$isPast && !$hasAccess): ?>
+                                <?php if ($status !== 'finished' && $status !== 'ending_soon' && !$hasAccess): ?>
                                 <div class="course-overlay">
                                     <button onclick="addSyncClassToCart(<?php echo $syncClass['id']; ?>)" class="btn-overlay">Agregar al Carrito</button>
                                 </div>
@@ -267,18 +298,26 @@ $userDisplayName = getUserDisplayName($currentUser);
                             </div>
                             <div class="product-details">
                                 <span class="product-catagory">
-                                    <?php if ($isPast): ?>
-                                        <i class="fas fa-clock"></i> Finalizada
-                                    <?php else: ?>
-                                        <i class="fas fa-calendar"></i> <?php echo date('d M Y', strtotime($syncClass['start_date'])); ?>
-                                    <?php endif; ?>
+                                    <i class="fas fa-calendar"></i> <?php echo date('d M Y', strtotime($syncClass['start_date'])); ?> - <?php echo date('d M Y', strtotime($syncClass['end_date'])); ?>
                                 </span>
                                 <h4>
                                     <?php echo htmlspecialchars($syncClass['title']); ?>
                                 </h4>
                                 <p><?php echo htmlspecialchars(substr($syncClass['description'] ?: 'Clase sincrónica en vivo', 0, 100)); ?></p>
+                                <?php if (!empty($schedules)): ?>
+                                <div style="margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 8px; font-size: 0.85rem;">
+                                    <strong style="display: block; margin-bottom: 5px;"><i class="fas fa-clock"></i> Horarios Semanales:</strong>
+                                    <?php foreach ($schedules as $schedule): ?>
+                                        <div style="padding: 3px 0;">
+                                            <?php echo \Models\SyncClassSchedule::getDayName($schedule['day_of_week']); ?>: 
+                                            <?php echo date('H:i', strtotime($schedule['start_time'])); ?> - 
+                                            <?php echo date('H:i', strtotime($schedule['end_time'])); ?>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                                <?php endif; ?>
                                 <div class="product-bottom-details" style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
-                                    <?php if (!$hasAccess && !$isPast): ?>
+                                    <?php if (!$hasAccess && $status !== 'finished' && $status !== 'ending_soon'): ?>
                                         <div class="product-price">
                                             $<?php echo number_format($syncClass['price'], 2); ?>
                                         </div>
@@ -292,20 +331,21 @@ $userDisplayName = getUserDisplayName($currentUser);
                                             </a>
                                             <?php endif; ?>
                                             <?php
-                                            // Google Calendar logic replicada de purchase-history.php
-                                            $title = urlencode($syncClass['title']);
-                                            $details = urlencode($syncClass['description']);
-                                            $location = urlencode($syncClass['meeting_link']);
-                                            $start = date('Ymd\THis', strtotime($syncClass['start_date']));
-                                            $end = date('Ymd\THis', strtotime($syncClass['end_date']));
-                                            $googleCalendarUrl = "https://www.google.com/calendar/render?action=TEMPLATE&text={$title}&dates={$start}/{$end}&details={$details}&location={$location}";
+                                            // Usar GoogleCalendarController para generar URL pre-llenada
+                                            require_once __DIR__ . '/../../controllers/GoogleCalendarController.php';
+                                            $googleCalController = new \Controllers\GoogleCalendarController();
+                                            $calendarResult = $googleCalController->generateGoogleCalendarUrl($syncClass['id']);
+                                            if (isset($calendarResult['url'])):
                                             ?>
-                                            <a href="<?php echo $googleCalendarUrl; ?>" target="_blank" class="btn-ics-download" style="background: #4285F4; color: white; font-size: 0.9rem; padding: 6px 12px; min-width: 120px; text-align: center;" title="Agregar a Google Calendar">
+                                            <a href="<?php echo htmlspecialchars($calendarResult['url']); ?>" target="_blank" class="btn-ics-download" style="background: #4285F4; color: white; font-size: 0.9rem; padding: 6px 12px; min-width: 120px; text-align: center;" title="Agregar a Google Calendar">
                                                 <i class="fas fa-calendar-plus"></i> Google Calendar
                                             </a>
+                                            <?php endif; ?>
                                         </div>
-                                    <?php elseif ($isPast): ?>
+                                    <?php elseif ($status === 'finished'): ?>
                                         <button class="add-to-cart-btn" style="opacity: 0.5; cursor: not-allowed; font-size: 0.9rem; padding: 6px 12px; min-width: 120px;" disabled>Finalizada</button>
+                                    <?php elseif ($status === 'ending_soon'): ?>
+                                        <button class="add-to-cart-btn" style="background: #ff6b6b; opacity: 0.5; cursor: not-allowed; font-size: 0.9rem; padding: 6px 12px; min-width: 120px;" disabled>No Disponible</button>
                                     <?php else: ?>
                                         <button onclick="addSyncClassToCart(<?php echo $syncClass['id']; ?>)" class="add-to-cart-btn" style="font-size: 0.9rem; padding: 6px 12px; min-width: 120px;">Agregar al Carrito</button>
                                     <?php endif; ?>
@@ -321,9 +361,91 @@ $userDisplayName = getUserDisplayName($currentUser);
                     <p>Pronto anunciaremos nuevas clases en vivo. ¡Mantente atento!</p>
                 </div>
             <?php endif; ?>
+            <div class="view-more" style="margin-top: 2rem;">
+                <a href="all-sync-classes.php" style="display: inline-block; padding: 0.75rem 2rem; background: linear-gradient(135deg, #8a56e2 0%, #56e2c6 100%); color: white; text-decoration: none; border-radius: 8px; font-weight: 600; transition: all 0.3s ease;">
+                    Ver Todas las Clases Sincrónicas <i class="fas fa-arrow-right"></i>
+                </a>
+            </div>
         </div>
     </section>
 
+        <!-- Private Classes Section -->
+    <section id="clases-privadas" class="private-classes" style="background: #f8f9fa;">
+        <div class="container">
+            <div class="private-classes-content">
+                <div class="private-classes-header">
+                    <h2 style="color: #333;">Clases Privadas Personalizadas</h2>
+                    <p class="section-subtitle" style="color: #666;">¿Necesitas un enfoque más personalizado? Agenda una clase privada conmigo y avanza a tu propio ritmo</p>
+                </div>
+                
+                <div class="private-classes-grid">
+                    <div class="private-class-card">
+                        <div class="private-class-icon">
+                            <i class="fas fa-user-graduate"></i>
+                        </div>
+                        <h3>Atención Personalizada</h3>
+                        <p>Clases uno a uno diseñadas específicamente para tus necesidades y objetivos de aprendizaje</p>
+                    </div>
+                    
+                    <div class="private-class-card">
+                        <div class="private-class-icon">
+                            <i class="fas fa-calendar-check"></i>
+                        </div>
+                        <h3>Horarios Flexibles</h3>
+                        <p>Agenda tus clases cuando más te convenga, adaptándose a tu estilo de vida</p>
+                    </div>
+                    
+                    <div class="private-class-card">
+                        <div class="private-class-icon">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <h3>Progreso Acelerado</h3>
+                        <p>Avanza más rápido con un plan de estudios personalizado y retroalimentación constante</p>
+                    </div>
+                </div>
+                
+                <div class="private-classes-cta" id="private-classes-cta">
+                    <h3>¿Listo para empezar?</h3>
+                    <p>Contáctame por WhatsApp y conversemos sobre tus objetivos de aprendizaje</p>
+                    <a href="https://wa.me/<?php echo htmlspecialchars($contactInfo['whatsapp_number'] ?? '573123456789'); ?>?text=Hola,%20estoy%20interesado%20en%20clases%20privadas%20de%20inglés" 
+                       target="_blank" 
+                       class="btn-whatsapp-large">
+                        <i class="fab fa-whatsapp"></i> Contáctame por WhatsApp
+                    </a>
+                </div>
+                
+                <div class="social-media-section">
+                    <h3>Sígueme en Redes Sociales</h3>
+                    <p>Encuentra tips, consejos y contenido exclusivo en mis redes</p>
+                    <div class="social-links">
+                        <a href="<?php echo htmlspecialchars($contactInfo['instagram_url'] ?? 'https://instagram.com/profehernan'); ?>" target="_blank" class="social-link instagram">
+                            <i class="fab fa-instagram"></i>
+                            <span>Instagram</span>
+                        </a>
+                        <a href="<?php echo htmlspecialchars($contactInfo['facebook_url'] ?? 'https://facebook.com/profehernan'); ?>" target="_blank" class="social-link facebook">
+                            <i class="fab fa-facebook-f"></i>
+                            <span>Facebook</span>
+                        </a>
+                        <a href="<?php echo htmlspecialchars($contactInfo['youtube_url'] ?? 'https://youtube.com/@profehernan'); ?>" target="_blank" class="social-link youtube">
+                            <i class="fab fa-youtube"></i>
+                            <span>YouTube</span>
+                        </a>
+                        <a href="https://wa.me/<?php echo htmlspecialchars($contactInfo['whatsapp_number'] ?? '573123456789'); ?>" target="_blank" class="social-link whatsapp">
+                            <i class="fab fa-whatsapp"></i>
+                            <span>WhatsApp</span>
+                        </a>
+                        <?php if (!empty($contactInfo['whatsapp_channel'])): ?>
+                        <a href="<?php echo htmlspecialchars($contactInfo['whatsapp_channel']); ?>" target="_blank" class="social-link whatsapp-channel" style="background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);">
+                            <i class="fab fa-whatsapp"></i>
+                            <span>Canal WhatsApp</span>
+                        </a>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    
     <!-- Call to action for all courses -->
     <section class="view-all-courses">
         <div class="container">
@@ -338,7 +460,7 @@ $userDisplayName = getUserDisplayName($currentUser);
     </section>
 
     <!-- Books Section -->
-    <section class="books-showcase">
+    <section class="books-showcase" id="books-showcase">
         <div class="container">
             <div class="section-header">
                 <h2>Libros Recomendados</h2>
@@ -394,37 +516,223 @@ $userDisplayName = getUserDisplayName($currentUser);
             <?php endif; ?>
         </div>
     </section>
-
-    <!-- About Section -->
-    <section class="about-section" id="about-section">
-        <div class="container">
-            <div class="about-content">
-                <div class="about-text">
-                    <h2>Conoce al Profesor Hernán</h2>
-                    <p>Con más de 15 años de experiencia, el Profesor Hernán ha ayudado a miles de estudiantes a alcanzar sus metas en inglés. Su metodología se centra en la práctica constante, la inmersión cultural y un enfoque personalizado para cada alumno.</p>
-                    <div class="about-features">
-                        <div class="feature-item">
-                            <i class="fas fa-chalkboard-teacher"></i>
-                            <div>
-                                <h4>Metodología Comprobada</h4>
-                                <p>Clases dinámicas y efectivas diseñadas para el aprendizaje rápido.</p>
-                            </div>
-                        </div>
-                        <div class="feature-item">
-                            <i class="fas fa-users"></i>
-                            <div>
-                                <h4>Comunidad de Apoyo</h4>
-                                <p>Únete a una red de estudiantes y practica con hablantes nativos.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="about-image">
-                    <img src="../../public/img/logo-profe-hernan.png" alt="Profesor Hernán">
-                </div>
-            </div>
-        </div>
-    </section>
+    
+    <style>
+    .private-classes {
+        padding: 80px 0;
+        background: #f8f9fa;
+        color: #333;
+    }
+    
+    .private-classes-header {
+        text-align: center;
+        margin-bottom: 60px;
+    }
+    
+    .private-classes-header h2 {
+        font-size: 2.5rem;
+        margin-bottom: 20px;
+        color: #333;
+    }
+    
+    .private-classes-header .section-subtitle {
+        font-size: 1.2rem;
+        max-width: 700px;
+        margin: 0 auto;
+        color: #666;
+    }
+    
+    .private-classes-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 30px;
+        margin-bottom: 60px;
+    }
+    
+    .private-class-card {
+        background: white;
+        padding: 40px 30px;
+        border-radius: 15px;
+        text-align: center;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    }
+    
+    .private-class-card:hover {
+        transform: translateY(-10px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    }
+    
+    .private-class-icon {
+        width: 80px;
+        height: 80px;
+        margin: 0 auto 20px;
+        background: linear-gradient(135deg, #8a56e2 0%, #a256e2 100%);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+        color: white;
+    }
+    
+    .private-class-card h3 {
+        font-size: 1.3rem;
+        margin-bottom: 15px;
+        color: #333;
+    }
+    
+    .private-class-card p {
+        line-height: 1.6;
+        color: #666;
+    }
+    
+    .private-classes-cta {
+        background: white;
+        padding: 50px;
+        border-radius: 20px;
+        text-align: center;
+        margin-bottom: 60px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+    }
+    
+    .private-classes-cta h3 {
+        font-size: 2rem;
+        margin-bottom: 15px;
+        color: #333;
+    }
+    
+    .private-classes-cta p {
+        font-size: 1.1rem;
+        color: #666;
+        margin-bottom: 30px;
+    }
+    
+    .btn-whatsapp-large {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        padding: 18px 40px;
+        background: #25D366;
+        color: white;
+        text-decoration: none;
+        border-radius: 50px;
+        font-size: 1.2rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        box-shadow: 0 10px 30px rgba(37, 211, 102, 0.3);
+    }
+    
+    .btn-whatsapp-large:hover {
+        background: #128C7E;
+        transform: scale(1.05);
+        box-shadow: 0 15px 40px rgba(37, 211, 102, 0.4);
+    }
+    
+    .btn-whatsapp-large i {
+        font-size: 1.5rem;
+    }
+    
+    .social-media-section {
+        text-align: center;
+    }
+    
+    .social-media-section h3 {
+        font-size: 2rem;
+        margin-bottom: 15px;
+        color: #333;
+    }
+    
+    .social-media-section p {
+        font-size: 1.1rem;
+        margin-bottom: 30px;
+        color: #666;
+    }
+    
+    .social-links {
+        display: flex;
+        justify-content: center;
+        gap: 20px;
+        flex-wrap: wrap;
+    }
+    
+    .social-link {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+        padding: 25px 30px;
+        background: white;
+        border-radius: 15px;
+        text-decoration: none;
+        color: #333;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        min-width: 140px;
+    }
+    
+    .social-link i {
+        font-size: 2.5rem;
+    }
+    
+    .social-link span {
+        font-size: 1rem;
+        font-weight: 600;
+    }
+    
+    .social-link:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    }
+    
+    .social-link.instagram:hover {
+        background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+        color: white;
+    }
+    
+    .social-link.facebook:hover {
+        background: #1877F2;
+        color: white;
+    }
+    
+    .social-link.youtube:hover {
+        background: #FF0000;
+        color: white;
+    }
+    
+    .social-link.whatsapp:hover {
+        background: #25D366;
+        color: white;
+    }
+    
+    .social-link.whatsapp-channel:hover {
+        background: linear-gradient(135deg, #128C7E 0%, #075E54 100%);
+        color: white;
+    }
+    
+    @media (max-width: 768px) {
+        .private-classes {
+            padding: 60px 0;
+        }
+        
+        .private-classes-header h2 {
+            font-size: 2rem;
+        }
+        
+        .private-classes-cta {
+            padding: 30px 20px;
+        }
+        
+        .social-links {
+            gap: 15px;
+        }
+        
+        .social-link {
+            min-width: 120px;
+            padding: 20px;
+        }
+    }
+    </style>
 
     <!-- Footer -->
     <footer class="footer">
@@ -742,5 +1050,8 @@ function addSyncClassToCart(classId) {
     });
 }
     </script>
+    
+    <!-- Smooth Scroll Script -->
+    <script src="../../public/js/smooth-scroll.js"></script>
 </body>
 </html>
