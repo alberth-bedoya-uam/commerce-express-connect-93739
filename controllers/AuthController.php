@@ -9,9 +9,11 @@ require_once __DIR__ . '/../models/User.php';
 require_once __DIR__ . '/../models/UserCourse.php';
 require_once __DIR__ . '/EmailController.php';
 require_once __DIR__ . '/../helpers/SecurityHelper.php';
+require_once __DIR__ . '/../helpers/SecurityLogger.php';
 
 use Models\User;
 use Helpers\SecurityHelper;
+use Helpers\SecurityLogger;
 
 class AuthController {
 
@@ -228,11 +230,13 @@ class AuthController {
             $currentIP = $this->getClientIP();
             if ($resetData['ip_address'] && $resetData['ip_address'] !== $currentIP) {
                 // Registrar posible uso malicioso
-                SecurityHelper::logSecurityEvent('password_reset_ip_mismatch', [
-                    'user_id' => $resetData['user_id'],
-                    'original_ip' => $resetData['ip_address'],
-                    'current_ip' => $currentIP
-                ]);
+                $securityLogger = new SecurityLogger();
+                $securityLogger->logSecurityEvent(
+                    $resetData['user_id'],
+                    'password_reset_ip_mismatch',
+                    "IP cambió durante reset de contraseña. Original: {$resetData['ip_address']}, Actual: {$currentIP}",
+                    'medium'
+                );
             }
 
             // Actualizar contraseña
@@ -260,10 +264,8 @@ class AuthController {
                 // Log de seguridad
                 error_log("Contraseña cambiada exitosamente para usuario ID: " . $resetData['user_id'] . " desde IP: " . $currentIP);
                 
-                SecurityHelper::logSecurityEvent('password_reset_success', [
-                    'user_id' => $resetData['user_id'],
-                    'ip_address' => $currentIP
-                ]);
+                $securityLogger = new SecurityLogger();
+                $securityLogger->logPasswordChange($resetData['user_id'], 'password_reset');
                 
                 self::setFlashMessage('success', 'Contraseña actualizada exitosamente. Ya puedes iniciar sesión con tu nueva contraseña.');
                 header('Location: login.php');
